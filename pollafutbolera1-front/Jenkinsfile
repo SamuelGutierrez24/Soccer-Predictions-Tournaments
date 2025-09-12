@@ -1,0 +1,52 @@
+pipeline {
+    agent any
+
+    options {
+        timeout(time: 20, unit: 'MINUTES')
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                echo '✔️ Clonando repositorio'
+                checkout scm
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                echo '📦 Comprobando lockfile y instalando dependencias...'
+                sh '''
+                
+                  if [ -f package-lock.json ]; then
+                    echo "→ Encontré package-lock.json, ejecuto npm ci"
+                    npm ci
+                  else
+                    echo "→ No hay package-lock.json, ejecuto npm install"
+                    npm install --force
+                  fi
+                '''
+            }
+        }
+
+        stage('Build') {
+            steps {
+                echo '🚀 Ejecutando build de Next.js'
+                sh 'NEXT_PUBLIC_API_BASE_URL={\'default\'} npm run build'
+            }
+        }
+    }
+
+    post {
+        success {
+            echo '✅ Build completado con éxito'
+        }
+        failure {
+            echo '❌ Falló el build'
+        }
+        always {
+            echo '🧹 Limpiando workspace'
+            cleanWs()
+        }
+    }
+}
